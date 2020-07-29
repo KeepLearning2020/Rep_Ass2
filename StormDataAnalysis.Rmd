@@ -1,0 +1,271 @@
+---
+title: "Storm Data Analysis"
+
+output: html_document
+
+---
+
+Major weather events impact in the United States
+================================================
+
+## Synopsis
+
+This report aim to answer below two questions about the impact of severe weather events in the United States.
+
+1. which types of events (EVTYPE) are most harmful with respect to population health
+2. which types of events have the greatest economic consequences
+
+The data set provided by Coursera is used for analysis, that is an extract from the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm Database.
+
+The data from 2000 to 2011 are used for analysis in the report. The harm to population health is measured in terms of number of fatalities and injuries. The impact on economy is measured by damage to crops and property.
+
+Based on the analysis, following events are top ones that impact the population health:
+- tornado
+- excessive heat
+- lightning
+- hurriane
+- TSTM(Thunderstorm) Wind
+- Thunderstorm
+
+Following events have caused highest impact on economy:
+- hurricane
+- storm surge
+- tornado
+- hail
+- flood
+- flash flood
+
+
+This report could be of interest to government or municipal managers who might be
+responsible for preparing for severe weather events and will need to prioritize
+resources for different types of events.
+
+This report was made as an assignment for the [Reproducible Research](https://www.coursera.org/course/repdata) Coursera course. 
+
+** Following steps are applied in the report:
+- Load data
+- Filter out used variables
+- Filter out data for the period with enough records
+- Optimize Event Type element value
+- Calculate damage to economy based on property damage and crops damage
+- Calculate impact on popular health in terms of fatalities and injuries
+
+##Load Data
+
+### Preparation
+
+Following libraries are required:
+
+- dplyr
+- lubridate
+- xtable
+- knitr
+
+### Reading the data
+
+The data source is the compressed file from the Coursera course site: [Storm data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2). The data set is downloaded and stored under the work directory, so the download is not tried.
+
+```{r}
+
+#url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+#destfile <- "repdata-data-StormData.csv.bz2"
+#if(!file.exists(destfile)){
+#	download.file(url, destfile)
+#}
+#stormData <- read.csv(bzfile("repdata-data-StormData.csv.bz2"))
+#unlink(destfile)
+
+#or
+#unzip("repdata-data-StormData.csv.bz2")
+Sys.setlocale(category="LC_ALL", locale="us")
+stormData <- read.csv("repdata_data_StormData.csv")
+
+dim(stormData)
+
+```
+
+The result stormData contains 902297*37, covering data from 1950 to 2011. Next step is to filter out data for the period with enough records.
+
+##Data Processing
+
+###Filter out used variables
+```{r}
+names(stormData)
+filterData <- subset(stormData[,c(2, 8, 23, 24, 25, 26, 27, 28)])
+
+```
+In order to get the answer to the questions about the impact of event types to population health and economy, following variables are fethed out from the data set:
+
+- BGN_DATE: Begin date of event. The included year is used to check and select the period with enough records.
+- EVTYPE: Event Type. The values of most are defined manually with different name. Optimization is applied to classify similar items with same name.
+- FATALITIES: Number of fatalities.
+- INJURIES: Number of injuries.
+- PROPDMG: Damage to property, with unit identified in "PROPDMGEXP".
+- PROPDMGEXP: Unit of PROPDMG. It has values as B,M,K,H,etc.
+- CROPDMG: Damage to crops, with unit identified in "CROPDMGEXP".
+- CROPDMGEXP: Unit of CROPDMGEXP. It has values as B,M,K,H,etc.
+
+###Filter out data based on time period
+```{r}
+Sys.setlocale(category="LC_ALL", locale="us")
+filterData_y <- subset(filterData, nchar(BGN_DATE)==17)
+
+library(lubridate)
+filterData_y$year <- year(as.Date(filterData_y$BGN_DATE, format = "%m/%d/%Y"))
+table(filterData_y$year)
+
+dataF2000 <- subset(filterData_y, year>=2000)
+dim(dataF2000)
+
+```
+
+According to the filtered out year, the data of old period before 1995 have less records. The data from 2000 to 2011 are selected for further data analysis, because total more than 340K (340982) records could be enough.
+
+
+### Event Type Optimization
+The NOAA storm database code book reports 48 event type. The event types in the data data has hundreds of types. The event type value is optimized to apply same name for similar events.
+
+```{r}
+
+dataFxxxx_evtname <- dataF2000
+dataFxxxx_evtname$EVTYPE <- toupper(dataFxxxx_evtname$EVTYPE)
+
+dataFxxxx_evtname$EVTYPE <- gsub("DUST DEVIL|DUST STORM", "DUST STORM", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("COASTAL FLOOD|COASTAL FLOODING", "COASTAL FLOOD", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^EXTREME WINDCHILL|EXTREME COLD/WIND CHILL|EXTREME WIND  CHILL TEMPERATURES", "EXTREME WIND CHILL", dataFxxxx_evtname$EVTYPE)
+
+dataFxxxx_evtname$EVTYPE <- gsub("FLOOD|HIGH WATER|SNOWMELT FLOODING|TIDAL FLOODING", "FLOOD", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^FREEZE.*|^FREEZING (RAIN|DRIZZLE|RAIN/SLEEET)", "FREEZE", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^FUNNEL FLOUD.*|FUNNEL CLOUDS", "FUNNEL CLOUD", dataFxxxx_evtname$EVTYPE)
+ 
+dataFxxxx_evtname$EVTYPE <- gsub("HEAVY SURF(/HIGH SURF)?.*$|^HIGH SURF.*|HIGH SEAS|   HIGH SURF ADVISORY", "HIGH SURF", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^HEAVY RAIN.*|HEAVY RAIN", "HEAVY RAIN", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("HURRICANE.*", "HURRICANE", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("TORNADO.*", "TORNADO", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("TROPICAL.*", "TROPICAL", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^THUNDERSTORM.*", "THUNDERSTORM", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^STRONG WIND.*", "STRONG WIND", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^TSTM WIND.*| TSTM WIND", "TSTM WIND", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^MARINETSTM WIND.*|MARINE STRONG WIND|MARINE THUNDERSTORM WIND|MARINETSTM WIND", "MARINE TSTM WIND", dataFxxxx_evtname$EVTYPE)
+
+dataFxxxx_evtname$EVTYPE <- gsub("FLOOD|HIGH WATER|SNOWMELT FLOODING|TIDAL FLOODING|URBAN/SML STREAM FLD", "FLOOD", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^WATERSPOUT.*| WATERSPOUT", "WATERSPOUT", dataFxxxx_evtname$EVTYPE)
+
+dataFxxxx_evtname$EVTYPE <- gsub("WILD.*|WILDFIRE", "WILD FIRE", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^WIND.*", "WIND", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^WINTER WEATHER.*|WINTRY MIX", "WINTER", dataFxxxx_evtname$EVTYPE)
+
+dataFxxxx_evtname$EVTYPE <- gsub("^GUSTY??WIND.*|STRONG WIND$", "STRONG WIND", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("SNOW/BLOWING SNOW", "HEAVY SNOW", dataFxxxx_evtname$EVTYPE)
+dataFxxxx_evtname$EVTYPE <- gsub("^SNOW .*", "SNOW", dataFxxxx_evtname$EVTYPE)
+
+```
+
+The number of event types are reduced from 169 to 125.
+
+### Damage Exponent conversion
+Since unit Million is the middle one for EXP variable, it is selected to use as base for damage calculation.
+
+```{r}
+
+table(dataFxxxx_evtname$PROPDMGEXP)
+table(dataFxxxx_evtname$CROPDMGEXP)
+
+decodeExp <- function(expList){
+	expList <- toupper(expList)
+	if (expList == "B") exp <- 1000
+	else if (expList == "M") exp <- 1
+	else if (expList == "K") exp <- 1/1000
+	else if (expList == "H") exp <- 1/10000
+	else exp <- 1/1000000
+	return (exp)
+}
+
+decodeExpV <- Vectorize(decodeExp)
+
+```
+
+
+## Tidy data generation and data analysis
+
+### Tidy data generation
+
+Final tidy data is built with sum of impact on health, and damage to economy.
+
+```{r}
+
+library(dplyr)
+
+tidyData <- dataFxxxx_evtname%>%
+	mutate(propDMGExpM = decodeExpV(PROPDMGEXP)
+		,propDMGinM = as.numeric(PROPDMG) * propDMGExpM
+		,cropDMGExpM = decodeExpV(CROPDMGEXP)
+		,cropDMGinM = as.numeric(CROPDMG) * cropDMGExpM
+		,health = as.numeric(FATALITIES) + as.numeric(INJURIES)
+		,ecoDMGinM = propDMGinM + cropDMGinM)%>%
+	select(year
+		,eventType = EVTYPE
+		,fatalities = FATALITIES
+		,injuries = INJURIES
+		,health
+		,propDMGinM
+		,cropDMGinM
+		,ecoDMGinM)
+
+
+```
+
+
+### Impact summary
+
+The impact to population health and economy are summarized to each event type. The top ten ones are listed out separately.
+
+The event tornano has the most severe impact on population health. The event hurriane caused most damage to economy.
+
+
+```{r}
+
+library(xtable)
+
+healthEvt <- tidyData%>%
+	group_by(eventType)%>%
+	summarise(totalHealth = sum(health), eventN = n())%>%
+	arrange(desc(totalHealth, eventN))
+print(xtable(head(healthEvt, n = 10), digits=c(0,0,0,2)), type="html")
+
+
+ecoDMGEvt <- tidyData%>%
+	group_by(eventType)%>%
+	summarise(totalDMG = sum(ecoDMGinM), eventN = n())%>%
+	arrange(desc(totalDMG))
+print(xtable(head(ecoDMGEvt, n = 10), digits=c(0,0,0,2)), type="html")
+
+```
+
+### Display result in figure
+
+```{r}
+
+par(mfrow=c(2,1))
+
+setcol <- c("red2","blue2", "olivedrab2", "yellow", "bisque", rep("grey", 1))
+
+barplot(healthEvt$totalHealth[1:6], names=healthEvt$eventType[1:6]
+	,horiz=T, las=1, xlim=c(0,15000), col=setcol
+	,cex.axis=0.5, cex=0.5, cex.lab=0.8, mgp=c(3.5,1,0)
+	,main="Most harmful events to health"
+	,ylab="Weather Event Type", xlab="Total fatalities and injuries")
+
+
+barplot(ecoDMGEvt$totalDMG[1:6], names=ecoDMGEvt$eventType[1:6]
+	,horiz=T, las=1, xlim=c(0,60000), col=setcol
+	,cex.axis=0.5, cex=0.5, cex.lab=0.8, mgp=c(3.5,1,0)
+	,main="Most damaging events to economy"
+	,ylab="Weather Event Type", xlab="Total damage to crops and property (in Million)")
+
+
+#save figure
+dev.copy(png, file = "stormDataAnalysis.png", height = 600, width = 600)
+dev.off()
+
+```
