@@ -18,28 +18,46 @@ There are three files in this repo:
 
 - The Rmd script StormDataAnalysis.Rmd is created for data cleaning and analysis.
 
-- The StormDataAnalysis.html is the output result from previous Rmd file. It is also published under Rpubs as ??
+- The StormDataAnalysis.html is the output result from previous Rmd file. It is also published under Rpubs as https://rpubs.com/KeepLearning/644090.
+
+- The figure StormDataAnalysis.png records the top event types with biggest impact to population health and economy consequences separately.
 
 ## Details in Rmd script
 
-As the request, the R script run_analysis.R realizes followings:
-- Merges the training and the test sets to create one data set.
-- Extracts only the measurements on the mean and standard deviation for each measurement.
-- Uses descriptive activity names to name the activities in the data set.
-- Appropriately labels the data set with descriptive variable names.
-- Creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+The data from 2000 to 2011 are used for analysis in the project. The harm to population health is measured in terms of number of fatalities and injuries. The impact on economy is measured by damage to crops and property.
+
+According to the analysis result, the following events are top ones that impact the population health:
+- tornado
+- excessive heat
+- lightning
+- hurriane
+- TSTM(Thunderstorm) Wind
+- Thunderstorm
+
+Following events have caused highest impact on economy:
+- hurricane
+- storm surge
+- tornado
+- hail
+- flood
+- flash flood
+
+This report could be of interest to government or municipal managers who might be responsible for preparing for severe weather events and will need to prioritize resources for different types of events.
+
+
+## Details in Rmd script
 
 Details implemented in run_analysis.R:
 
 *Preparation*
 - Download the raw data from provided weblink, through download.file.
 - Unzip the download file, through unzip. 
-- Read data from downloaded package and store as new variables, including features, activity_labels, X_trian, Y_train, subject_train, X_test, Y_test, subject_test.
-- Bind trainning and test data in two tables with all input separately. 
+- Read data from downloaded compressed package. 
 
-*Handling data as request*
-- Merge training and test data as one dataset named fullData, through rbind.
-- Extracts measurements on mean and standard deviation for each measurements from fllData, through grep.
-- New column act_name is added in fullData to describe the name of related activity. The activity name is fetched from activity_labels, through match.
-- Update some column names to make them better readable, through gsub.
-- New tidy data set named meanDatabyAct is created to give the average of each variable for each activity and each subject. Another data set as meanDatabySub is created by ordering the search result on subject first. The tidy data meanDatabyAct is stored in output file "meanDatabyActivitySubject.txt".
+*Data handling*
+- Filter out the variables used for further calculation.
+- FIlter out data for the perios with enough data. The data from 2000 to 2011 are selected.
+- Optimize Event type values to classify similar events with same name.
+- Convert the exponent varabile for crops and property to numeral.
+- Calculate damage to economy by summing property damage and crops damage.
+- Calculate impact to population health by counting number of both fatalities and injuries.
